@@ -257,6 +257,76 @@ func TestSetupTunnelDevice(t *testing.T) {
 		})
 	})
 
+	t.Run("VxlanSrcPortRange", func(t *testing.T) {
+		ns := netns.NewNetNS(t)
+
+		ns.Do(func() error {
+			srcMin := uint16(1000)
+			srcMax := uint16(2000)
+
+			link, err := netlink.LinkByName(defaults.VxlanDevice)
+			if err != nil {
+				err = netlink.LinkDel(link)
+				require.NoError(t, err)
+			}
+
+			err = setupTunnelDevice(sysctl, tunnel.VXLAN, defaults.TunnelPortVXLAN, srcMin, srcMax, mtu)
+			require.NoError(t, err)
+
+			link, err = netlink.LinkByName(defaults.VxlanDevice)
+			require.NoError(t, err)
+
+			vxlan, ok := link.(*netlink.Vxlan)
+			require.True(t, ok)
+			require.True(t, vxlan.FlowBased)
+			require.EqualValues(t, defaults.TunnelPortVXLAN, vxlan.Port)
+			require.EqualValues(t, srcMin, vxlan.PortLow)
+			require.EqualValues(t, srcMax, vxlan.PortHigh)
+
+			err = netlink.LinkDel(link)
+			require.NoError(t, err)
+
+			return nil
+		})
+	})
+
+	t.Run("VxlanSrcPortRangeExistingDev", func(t *testing.T) {
+		ns := netns.NewNetNS(t)
+
+		ns.Do(func() error {
+			srcMin := uint16(1000)
+			srcMax := uint16(2000)
+
+			err := setupTunnelDevice(sysctl, tunnel.VXLAN, defaults.TunnelPortVXLAN, 0, 0, mtu)
+			require.NoError(t, err)
+
+			link, err := netlink.LinkByName(defaults.VxlanDevice)
+			require.NoError(t, err)
+
+			vxlan, ok := link.(*netlink.Vxlan)
+			require.True(t, ok)
+			require.EqualValues(t, 0, vxlan.PortLow)
+			require.EqualValues(t, 0, vxlan.PortHigh)
+
+			err = setupTunnelDevice(sysctl, tunnel.VXLAN, defaults.TunnelPortVXLAN, srcMin, srcMax, mtu)
+			require.NoError(t, err)
+
+			link, err = netlink.LinkByName(defaults.VxlanDevice)
+			require.NoError(t, err)
+
+			// On existing device the port range should not change.
+			vxlan, ok = link.(*netlink.Vxlan)
+			require.True(t, ok)
+			require.EqualValues(t, 0, vxlan.PortLow)
+			require.EqualValues(t, 0, vxlan.PortHigh)
+
+			err = netlink.LinkDel(link)
+			require.NoError(t, err)
+
+			return nil
+		})
+	})
+
 	t.Run("EnableSwitchDisable", func(t *testing.T) {
 		ns := netns.NewNetNS(t)
 
