@@ -539,6 +539,7 @@ resolve_srcid_ipv4(struct __ctx_buff *ctx, struct iphdr *ip4,
 		   const bool from_host)
 {
 	__u32 src_id = WORLD_IPV4_ID, srcid_from_ipcache = srcid_from_proxy;
+	bool cache_entry_found = false;
 	struct remote_endpoint_info *info = NULL;
 
 	/* Packets from the proxy will already have a real identity. */
@@ -556,15 +557,17 @@ resolve_srcid_ipv4(struct __ctx_buff *ctx, struct iphdr *ip4,
 				 * the host. So we can ignore the ipcache if it
 				 * reports the source as HOST_ID.
 				 */
-				if (*sec_identity != HOST_ID)
+				if (*sec_identity != HOST_ID) {
+					cache_entry_found = true;
 					srcid_from_ipcache = *sec_identity;
+				}
 			}
 		}
 		cilium_dbg(ctx, info ? DBG_IP_ID_MAP_SUCCEED4 : DBG_IP_ID_MAP_FAILED4,
 			   ip4->saddr, srcid_from_ipcache);
 	}
 
-	if (from_host)
+	if (from_host || cache_entry_found)
 		src_id = srcid_from_ipcache;
 	/* If we could not derive the secctx from the packet itself but
 	 * from the ipcache instead, then use the ipcache identity.
@@ -1082,6 +1085,7 @@ do_netdev(struct __ctx_buff *ctx, __u16 proto, const bool from_host)
 	struct iphdr __maybe_unused *ip4;
 	__s8 __maybe_unused ext_err = 0;
 	int ret;
+	int off;
 
 #ifdef ENABLE_IPSEC
 	if (!from_host) {
@@ -1191,7 +1195,7 @@ do_netdev(struct __ctx_buff *ctx, __u16 proto, const bool from_host)
 		 * Make sure that we don't legitimately drop the packet if the skb
 		 * arrived with the header not being not in the linear data.
 		 */
-		if (!revalidate_data_pull(ctx, &data, &data_end, &ip4))
+		if (!revalidate_data_ipv4_l3_pull(ctx, &data, &data_end, &ip4, &off))
 			return send_drop_notify_error(ctx, identity, DROP_INVALID,
 						      CTX_ACT_DROP, METRIC_INGRESS);
 

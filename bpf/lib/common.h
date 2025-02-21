@@ -27,6 +27,10 @@
 #define AF_INET6 10
 #endif
 
+#ifndef IP_HDR_LEN
+#define IP_HDR_LEN 20
+#endif
+
 #ifndef IP_DF
 #define IP_DF 0x4000
 #endif
@@ -255,15 +259,15 @@ static __always_inline __u32 get_id_from_tunnel_id(__u32 tunnel_id, __u16 proto 
 #define revalidate_data_pull(ctx, data, data_end, ip)			\
 	__revalidate_data_pull(ctx, data, data_end, (void **)ip, ETH_HLEN, sizeof(**ip), true)
 
-#define revalidate_data_l3_off(ctx, data, data_end, ip, l3_off)		\
-	__revalidate_data_pull(ctx, data, data_end, (void **)ip, l3_off, sizeof(**ip), false)
+#define revalidate_data_l3_off(ctx, data, data_end, ip, l3_off, pull)		\
+	__revalidate_data_pull(ctx, data, data_end, (void **)ip, l3_off, sizeof(**ip), pull)
 
 /* revalidate_data() initializes the provided pointers from the ctx.
  * Returns true if 'ctx' is long enough for an IP header of the provided type,
  * false otherwise.
  */
 #define revalidate_data(ctx, data, data_end, ip)			\
-	revalidate_data_l3_off(ctx, data, data_end, ip, ETH_HLEN)
+	revalidate_data_l3_off(ctx, data, data_end, ip, ETH_HLEN, false)
 
 /* Macros for working with L3 cilium defined IPV6 addresses */
 #define BPF_V6(dst, ...)	BPF_V6_1(dst, fetch_ipv6(__VA_ARGS__))

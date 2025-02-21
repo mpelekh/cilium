@@ -68,6 +68,35 @@ static __always_inline int ipv4_l3(struct __ctx_buff *ctx, int l3_off,
 	return CTX_ACT_OK;
 }
 
+static __always_inline __maybe_unused bool
+__revalidate_data_ipv4_l3(struct __ctx_buff *ctx, void **data, void **data_end,
+						struct iphdr **ip4, int *l3_off, bool pull)
+{
+	bool result;
+	*l3_off = ETH_HLEN;
+	result = revalidate_data_l3_off(ctx, data, data_end, ip4, *l3_off, pull);
+	if (result && (*ip4)->protocol == IPPROTO_IPIP) {
+		*l3_off = ETH_HLEN + IP_HDR_LEN;
+		result = revalidate_data_l3_off(ctx, data, data_end, ip4, *l3_off, false);
+	}
+	return result;
+}
+
+static __always_inline __maybe_unused bool
+revalidate_data_ipv4_l3(struct __ctx_buff *ctx, void **data, void **data_end,
+					struct iphdr **ip4, int *l3_off)
+{
+	return __revalidate_data_ipv4_l3(ctx, data, data_end, ip4, l3_off, false);
+}
+
+static __always_inline __maybe_unused bool
+revalidate_data_ipv4_l3_pull(struct __ctx_buff *ctx, void **data, void **data_end,
+						struct iphdr **ip4, int *l3_off)
+{
+	return __revalidate_data_ipv4_l3(ctx, data, data_end, ip4, l3_off, true);
+}
+
+
 #ifndef SKIP_POLICY_MAP
 static __always_inline int
 l3_local_delivery(struct __ctx_buff *ctx, __u32 seclabel,
