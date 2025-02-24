@@ -539,7 +539,6 @@ resolve_srcid_ipv4(struct __ctx_buff *ctx, struct iphdr *ip4,
 		   const bool from_host)
 {
 	__u32 src_id = WORLD_IPV4_ID, srcid_from_ipcache = srcid_from_proxy;
-	bool cache_entry_found = false;
 	struct remote_endpoint_info *info = NULL;
 
 	/* Packets from the proxy will already have a real identity. */
@@ -558,7 +557,6 @@ resolve_srcid_ipv4(struct __ctx_buff *ctx, struct iphdr *ip4,
 				 * reports the source as HOST_ID.
 				 */
 				if (*sec_identity != HOST_ID) {
-					cache_entry_found = true;
 					srcid_from_ipcache = *sec_identity;
 				}
 			}
@@ -567,7 +565,7 @@ resolve_srcid_ipv4(struct __ctx_buff *ctx, struct iphdr *ip4,
 			   ip4->saddr, srcid_from_ipcache);
 	}
 
-	if (from_host || cache_entry_found)
+	if (from_host)
 		src_id = srcid_from_ipcache;
 	/* If we could not derive the secctx from the packet itself but
 	 * from the ipcache instead, then use the ipcache identity.
