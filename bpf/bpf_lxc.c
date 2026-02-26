@@ -289,17 +289,18 @@ int NAME(struct __ctx_buff *ctx)						\
 	__s8 ext_err = 0;							\
 	__u32 zero = 0;								\
 	void *map;								\
+	int off;								\
 										\
 	ct_state = (struct ct_state *)&ct_buffer.ct_state;			\
 	tuple = (struct ipv4_ct_tuple *)&ct_buffer.tuple;			\
 										\
-	if (!revalidate_data(ctx, &data, &data_end, &ip4))			\
+	if (!revalidate_data_ipv4_l3(ctx, &data, &data_end, &ip4, &off))			\
 		return drop_for_direction(ctx, DIR, DROP_INVALID, ext_err);	\
 										\
 	tuple->nexthdr = ip4->protocol;						\
 	tuple->daddr = ip4->daddr;						\
 	tuple->saddr = ip4->saddr;						\
-	ct_buffer.l4_off = ETH_HLEN + ipv4_hdrlen(ip4);				\
+	ct_buffer.l4_off = off + ipv4_hdrlen(ip4);				\
 										\
 	map = select_ct_map4(ctx, DIR, tuple);					\
 	if (!map)								\
@@ -2148,8 +2149,9 @@ int tail_ipv4_to_endpoint(struct __ctx_buff *ctx)
 	__u16 proxy_port = 0;
 	__s8 ext_err = 0;
 	int ret;
+	int off = 0;
 
-	if (!revalidate_data(ctx, &data, &data_end, &ip4)) {
+	if (!revalidate_data_ipv4_l3(ctx, &data, &data_end, &ip4, &off)) {
 		ret = DROP_INVALID;
 		goto out;
 	}

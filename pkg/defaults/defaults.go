@@ -565,7 +565,7 @@ const (
 	EnableNonDefaultDenyPolicies = true
 
 	// EnableSourceIPVerification is the default value for source ip validation
-	EnableSourceIPVerification = true
+	EnableSourceIPVerification = false
 
 	// WireguardTrackAllIPsFallback forces the WireGuard agent to track all IPs.
 	WireguardTrackAllIPsFallback = false
